@@ -3,6 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Post, Comment, Follow
 from .serializers import PostSerializer, CommentSerializer, FollowSerializer
 from .filters import PostFilter, CommentFilter, FollowFilter
+from rest_framework.permissions import AllowAny
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all().order_by('-created_at')
@@ -11,6 +12,7 @@ class PostViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     ordering_fields = ['author', 'created_at']
     ordering = ['created_at']
+    permission_classes = [AllowAny]
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all().order_by('-created_at')
