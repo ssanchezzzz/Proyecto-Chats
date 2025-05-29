@@ -2,26 +2,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-function PostCard({ post, children, onLike, onComment }) {
-    const [comment, setComment] = useState("");
+function PostCard({ post, children, onLike }) {
     const [likeLoading, setLikeLoading] = useState(false);
-    const [commentLoading, setCommentLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleLike = async () => {
         if (likeLoading) return;
         setLikeLoading(true);
-        await onLike(post.id);
+        if (onLike) await onLike(post.id);
         setLikeLoading(false);
-    };
-
-    const handleComment = async (e) => {
-        e.preventDefault();
-        if (commentLoading || !comment.trim()) return;
-        setCommentLoading(true);
-        await onComment(post.id, comment);
-        setComment("");
-        setCommentLoading(false);
     };
 
     return (
@@ -62,7 +51,7 @@ function PostCard({ post, children, onLike, onComment }) {
                 </button>
                 <button
                     type="button"
-                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold transition"
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-300 hover:bg-yellow-400 text-white font-semibold transition"
                     onClick={() => navigate(`/post/${post.id}`)}
                 >
                     <span>💬</span>
@@ -70,23 +59,6 @@ function PostCard({ post, children, onLike, onComment }) {
                     <span className="ml-1">Comentarios</span>
                 </button>
             </div>
-            <form onSubmit={handleComment} className="flex gap-2 mb-2">
-                <input
-                    type="text"
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    className="border border-blue-200 rounded px-3 py-1 flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 placeholder-gray-400"
-                    placeholder="Comenta algo..."
-                    disabled={commentLoading}
-                />
-                <button
-                    type="submit"
-                    className="bg-blue-500 text-white rounded px-4 py-1 font-semibold hover:bg-blue-700 transition"
-                    disabled={commentLoading}
-                >
-                    Comentar
-                </button>
-            </form>
             {children}
         </div>
     );

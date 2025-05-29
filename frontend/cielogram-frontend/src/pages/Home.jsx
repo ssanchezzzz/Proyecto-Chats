@@ -4,7 +4,7 @@ import PostCard from '../components/PostCard';
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useAuth } from '../context/AuthContext';
-import { getComments } from '../api/post'; // Asegúrate de tener esta función
+import { getComments, likePost } from '../api/post'; // Asegúrate de importar likePost
 
 function Home() {
     const [posts, setPosts] = useState([]);
@@ -75,6 +75,10 @@ function Home() {
             setError("You must be logged in to post.");
             return;
         }
+        if (!content.trim()) {
+            setError("El contenido no puede estar vacío.");
+            return;
+        }
         const formData = new FormData();
         formData.append("content", content);
         if (image) formData.append("image", image);
@@ -82,7 +86,6 @@ function Home() {
             await axios.post("http://localhost:8000/posts/posts/", formData, {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data"
                 }
             });
             setContent("");
@@ -90,7 +93,21 @@ function Home() {
             setShowPostForm(false);
             fetchPosts();
         } catch (err) {
-            setError("Failed to post.");
+            if (
+                err.response &&
+                (err.response.status === 401 ||
+                 (err.response.data && err.response.data.code === "token_not_valid"))
+            ) {
+                localStorage.removeItem("access");
+                localStorage.removeItem("refresh");
+                window.location.href = "/login";
+                return;
+            }
+            setError(
+                err.response?.data?.content?.[0] ||
+                err.response?.data?.detail ||
+                "Failed to post."
+            );
         }
     };
 
@@ -141,31 +158,17 @@ function Home() {
         const token = localStorage.getItem("access");
         if (!token) return;
         try {
-            await axios.post(`http://localhost:8000/posts/posts/${postId}/like/`, {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            fetchPosts();
+            await likePost(postId, token);
+            // Actualiza el contador de likes localmente
+            setPosts(prev =>
+                prev.map(post =>
+                    post.id === postId
+                        ? { ...post, likes_count: (post.likes_count || 0) + 1 }
+                        : post
+                )
+            );
+            // Si quieres evitar múltiples likes por usuario, deberías controlar esto en backend y frontend
         } catch (err) {
-            // Manejo de error opcional
-        }
-    };
-
-    const handleComment = async (postId, comment) => {
-        const token = localStorage.getItem("access");
-        if (!token) return;
-        try {
-            await axios.post(`http://localhost:8000/api/comments/`, {
-                post: postId,
-                content: comment
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            fetchPosts();
-        } catch (err) {
-            if (err.response && err.response.status === 401) {
-                localStorage.removeItem("access");
-                navigate("/login");
-            }
             // Manejo de error opcional
         }
     };
@@ -251,7 +254,6 @@ function Home() {
                                         <PostCard
                                             post={post}
                                             onLike={handleLike}
-                                            onComment={handleComment}
                                         >
                                             {user && user.user_id === post.author && (
                                                 <div className="flex gap-2 mt-2">

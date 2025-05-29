@@ -15,7 +15,7 @@ function PostDetail() {
     };
 
     const fetchComments = async () => {
-        const res = await axios.get(`http://localhost:8000/api/comments/?post=${id}`);
+        const res = await axios.get(`http://localhost:8000/posts/comments/?post=${id}`);
         setComments(res.data);
     };
 
@@ -32,9 +32,13 @@ function PostDetail() {
             setError("You must be logged in to comment.");
             return;
         }
+        if (!comment.trim()) {
+            setError("El comentario no puede estar vacío.");
+            return;
+        }
         try {
-            await axios.post("http://localhost:8000/api/comments/", {
-                post: id,
+            await axios.post("http://localhost:8000/posts/comments/", {
+                post: Number(id),
                 content: comment
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -42,11 +46,16 @@ function PostDetail() {
             setComment("");
             fetchComments();
         } catch (err) {
+            setError(
+                JSON.stringify(err.response?.data) ||
+                err.response?.data?.content?.[0] ||
+                err.response?.data?.detail ||
+                "Failed to comment."
+            );
             if (err.response && err.response.status === 401) {
                 localStorage.removeItem("access");
                 window.location.href = "/login";
             }
-            setError("Failed to comment.");
         }
     };
 
@@ -55,7 +64,15 @@ function PostDetail() {
             <div className="bg-white rounded-xl shadow-md p-4 w-full max-w-md">
                 {post ? (
                     <>
-                        <h1 className="text-xl font-bold text-gray-800 mb-2">{post.author_username}</h1>
+                        <div className="flex items-center justify-between mb-4">
+                            <button
+                                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-1 px-3 rounded text-xs"
+                                onClick={() => window.history.back()}
+                            >
+                                Regresar
+                            </button>
+                            <h1 className="text-xl font-bold text-gray-800">{post.author_username}</h1>
+                        </div>
                         <p className="text-gray-700 mb-2">{post.content}</p>
                         {post.image && <img src={post.image} alt="Post" className="rounded-lg mb-3 max-h-56 object-cover w-full" />}
                         <div className="text-gray-400 text-xs mb-4">{new Date(post.created_at).toLocaleString()}</div>
@@ -71,15 +88,15 @@ function PostDetail() {
                             <button type="submit" className="bg-blue-600 text-white rounded py-1 font-semibold hover:bg-blue-700 transition text-sm">Comment</button>
                             {error && <div className="text-red-500 text-xs">{error}</div>}
                         </form>
-                        <div>
+                        <div className="overflow-y-auto max-h-40 pr-1">
                             <h2 className="font-semibold mb-2 text-sm">
                                 Comentarios ({comments.length})
                             </h2>
                             {comments.length === 0 && <div className="text-gray-400 text-xs">No comments yet.</div>}
                             {comments.map(c => (
-                                <div key={c.id} className="mb-2 border-b pb-2 text-xs">
-                                    <div className="font-semibold">{c.author_username}</div>
-                                    <div className="text-gray-700">{c.content}</div>
+                                <div key={c.id} className="mb-2 border-b pb-2 text-xs break-words">
+                                    <div className="font-semibold text-blue-700">{c.author_username}</div>
+                                    <div className="text-gray-700 break-words">{c.content}</div>
                                     <div className="text-gray-400 text-[10px]">{new Date(c.created_at).toLocaleString()}</div>
                                 </div>
                             ))}
